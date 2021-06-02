@@ -602,11 +602,13 @@ void LoadEnvVars(box86context_t *context)
             printf_log(LOG_INFO, "\n");
         }
     }
+#ifndef __EMSCRIPTEN__
     // add libssl and libcrypto, prefer emulated version because of multiple version exist
     AddPath("libssl.so.1", &context->box86_emulated_libs, 0);
     AddPath("libssl.so.1.0.0", &context->box86_emulated_libs, 0);
     AddPath("libcrypto.so.1", &context->box86_emulated_libs, 0);
     AddPath("libcrypto.so.1.0.0", &context->box86_emulated_libs, 0);
+#endif
 
     if(getenv("BOX86_NOSIGSEGV")) {
         if (strcmp(getenv("BOX86_NOSIGSEGV"), "1")==0)
@@ -826,7 +828,7 @@ static void free_contextargv()
         free(my_context->argv[i]);
 }
 
-#ifndef ANDROID
+#if !defined(ANDROID) && !defined(__EMSCRIPTEN_major__)
 const char **environ __attribute__((weak)) = NULL;
 #endif
 
@@ -884,6 +886,7 @@ int main(int argc, const char **argv, const char **env) {
             //wine_preloaded = 1;
         }
     }
+#ifndef __EMSCRIPTEN__
     // check if this is wine
     if(!strcmp(prog, "wine") || (strlen(prog)>5 && !strcmp(prog+strlen(prog)-strlen("/wine"), "/wine"))) {
         const char* prereserve = getenv("WINEPRELOADRESERVE");
@@ -896,6 +899,7 @@ int main(int argc, const char **argv, const char **env) {
             exit(0);    // exiting, it doesn't work anyway
         }
     }
+#endif
     // Create a new context
     my_context = NewBox86Context(argc - nextarg);
 
@@ -1152,6 +1156,7 @@ int main(int argc, const char **argv, const char **env) {
     setupTraceInit(my_context);
     // export symbols
     AddSymbols(my_context->maplib, GetMapSymbol(my_context->maplib), GetWeakSymbol(my_context->maplib), GetLocalSymbol(my_context->maplib), elf_header);
+#ifndef __EMSCRIPTEN__
     if(wine_preloaded) {
         uintptr_t wineinfo = FindSymbol(GetMapSymbol(my_context->maplib), "wine_main_preload_info", -1, NULL, 1);
         if(!wineinfo) wineinfo = FindSymbol(GetWeakSymbol(my_context->maplib), "wine_main_preload_info", -1, NULL, 1);
@@ -1165,6 +1170,7 @@ int main(int argc, const char **argv, const char **env) {
         dynarec_wine_prereserve();
         #endif
     }
+#endif
     // pre-load lib if needed
     if(ld_preload.size) {
         if(AddNeededLib(NULL, NULL, NULL, 0, (const char**)ld_preload.paths, ld_preload.size, my_context, emu)) {

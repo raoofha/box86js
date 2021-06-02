@@ -583,7 +583,7 @@ typedef void (*wrapper_t)(x86emu_t* emu, uintptr_t fnc);
 			"*(uintptr_t*)(R_ESP + {p}), ",           # L
 			"*(void**)(R_ESP + {p}), ",               # p
 			"(void*)(R_ESP + {p}), ",                 # V
-			"of_convert(*(int32_t*)(R_ESP + {p})), ", # O
+			"/*of_convert*/(*(int32_t*)(R_ESP + {p})), ", # O
 			"io_convert(*(void**)(R_ESP + {p})), ",   # S
 			"(_2uint_struct_t){{*(uintptr_t*)(R_ESP + {p}),*(uintptr_t*)(R_ESP + {p} + 4)}}, ",	# 2
 			"arg{p}, ",                               # P
@@ -684,6 +684,8 @@ typedef void (*wrapper_t)(x86emu_t* emu, uintptr_t fnc);
 			file.write("#endif\n")
 		
 		file.write(files_guard["wrapper.c"].format(lbr="{", rbr="}", version=ver))
+		file.write("\ntypedef void (*vFpiip_t)(void*, int32_t, int32_t, void*);")
+		file.write("\nvoid vFpiip(x86emu_t *emu, uintptr_t fcn) { vFpiip_t fn = (vFpiip_t)fcn; fn(*(void**)(R_ESP + 4), *(int32_t*)(R_ESP + 8), *(int32_t*)(R_ESP + 12), *(void**)(R_ESP + 16)); }")
 	
 	# Rewrite the wrapper.h file:
 	with open(os.path.join(root, "src", "wrapped", "generated", "wrapper.h"), 'w') as file:
@@ -704,6 +706,7 @@ typedef void (*wrapper_t)(x86emu_t* emu, uintptr_t fnc);
 				file.write("void " + v[0] + "(x86emu_t *emu, uintptr_t fnc);\n")
 			file.write("#endif\n")
 		file.write(files_guard["wrapper.h"].format(lbr="{", rbr="}", version=ver))
+		file.write("\nvoid vFpiip(x86emu_t *emu, uintptr_t fnc);")
 	
 	for fn in mytypedefs:
 		with open(os.path.join(root, "src", "wrapped", "generated", fn + "types.h"), 'w') as file:
